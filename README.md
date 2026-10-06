@@ -47,4 +47,4 @@ O cruzamento preserva CPFs de editais 2024 que voltaram em edital posterior, atu
 
 Saídas (download local): `PlanilhaCPF.xlsx` e `CPFs_ausentes.xlsx`.
 
-Limites: 30 arquivos, 30 MB cada, só `.xlsx` e `.csv` (salve `.xls` antigo como `.xlsx` ou CSV). O cruzamento roda na memória da aba. Planilhas `.xlsx` usam a primeira aba, exceto Matriculados, que prefere **Matrículas Consolidadas**.
+Limites: 30 arquivos, 150 MB cada, só `.xlsx` e `.csv` (salve `.xls` antigo como `.xlsx` ou CSV). O cruzamento roda na memória da aba. Planilhas `.xlsx` usam a primeira aba, exceto Matriculados, que prefere **Matrículas Consolidadas**.

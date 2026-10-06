@@ -36,14 +36,20 @@ describe("evaluateFile", () => {
     });
   });
 
-  it("recusa arquivo maior que 30 MB", () => {
+  it("aceita CSV de 77 MB", () => {
+    expect(
+      evaluateFile(fileLike("inscricoes-geral.csv", 77 * 1024 * 1024)),
+    ).toEqual({ ok: true });
+  });
+
+  it("recusa arquivo maior que 150 MB", () => {
     expect(evaluateFile(fileLike("grande.xlsx", MAX_FILE_BYTES + 1))).toEqual({
       ok: false,
       reason: "size",
     });
   });
 
-  it("aceita arquivo com exatamente 30 MB", () => {
+  it("aceita arquivo com exatamente 150 MB", () => {
     expect(evaluateFile(fileLike("limite.xlsx", MAX_FILE_BYTES))).toEqual({
       ok: true,
     });

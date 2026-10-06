@@ -1,4 +1,5 @@
-export const MAX_FILE_BYTES = 30 * 1024 * 1024;
+export const MAX_FILE_MB = 150;
+export const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 export const MAX_FILES = 30;
 export const ACCEPTED_EXTENSIONS = [".xlsx", ".csv"] as const;
 
