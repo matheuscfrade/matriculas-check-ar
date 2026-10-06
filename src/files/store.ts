@@ -1,7 +1,9 @@
 import { evaluateFile, type RejectReason } from "./accept";
+import { slotById, slotFileMismatch } from "./slots";
 
 export type FileHandle = {
   id: string;
+  slotId?: string;
   name: string;
   size: number;
   type: string;
@@ -10,7 +12,8 @@ export type FileHandle = {
 
 export type FileError = {
   name: string;
-  reason: RejectReason;
+  reason: RejectReason | "slot";
+  detail?: string;
 };
 
 export type AddFilesResult = {
@@ -53,8 +56,63 @@ export function addFiles(
   return { next, errors };
 }
 
+export function setSlotFile(
+  current: FileHandle[],
+  slotId: string,
+  file: File,
+  options: AddFilesOptions = {},
+): AddFilesResult {
+  const slot = slotById(slotId);
+  if (!slot) {
+    return {
+      next: current,
+      errors: [{ name: file.name, reason: "slot", detail: "Espaço desconhecido." }],
+    };
+  }
+
+  const mismatch = slotFileMismatch(slot, file.name);
+  if (mismatch) {
+    return {
+      next: current,
+      errors: [{ name: file.name, reason: "slot", detail: mismatch }],
+    };
+  }
+
+  const rest = current.filter((handle) => handle.slotId !== slotId);
+  const result = evaluateFile(file, { currentCount: rest.length });
+  if (!result.ok) {
+    return {
+      next: current,
+      errors: [{ name: file.name, reason: result.reason }],
+    };
+  }
+
+  const idFactory = options.idFactory ?? newId;
+  return {
+    next: [
+      ...rest,
+      {
+        id: idFactory(),
+        slotId,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        file,
+      },
+    ],
+    errors: [],
+  };
+}
+
 export function removeFile(current: FileHandle[], id: string): FileHandle[] {
   return current.filter((handle) => handle.id !== id);
+}
+
+export function removeSlot(
+  current: FileHandle[],
+  slotId: string,
+): FileHandle[] {
+  return current.filter((handle) => handle.slotId !== slotId);
 }
 
 export function clearFiles(): FileHandle[] {

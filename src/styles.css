@@ -34,7 +34,7 @@ body {
 }
 
 .page {
-  max-width: 40rem;
+  max-width: 46rem;
   margin: 0 auto;
   padding: 2.25rem 1.25rem 4rem;
 }
@@ -59,52 +59,91 @@ body {
   max-width: 36rem;
 }
 
-.dropzone {
-  position: relative;
+.slots {
   margin-top: 1.75rem;
-  border: 1.5px dashed var(--campo);
-  background: color-mix(in srgb, var(--campo-fundo) 70%, white);
-  min-height: 11.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
 }
 
-.dropzone.is-over {
+.slot-group h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.slot-lead {
+  margin: 0.35rem 0 0.85rem;
+  color: color-mix(in srgb, var(--tinta) 72%, white);
+  max-width: 38rem;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.slot-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.slot {
+  border: 1.5px dashed var(--campo);
+  background: color-mix(in srgb, var(--campo-fundo) 70%, white);
+  padding: 0.85rem 0.95rem 0.95rem;
+  min-height: 7.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.slot.is-over,
+.slot.is-filled {
   background: var(--campo-fundo);
 }
 
-.dropzone-label {
+.slot.is-filled {
+  border-style: solid;
+}
+
+.slot-label {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  padding: 1.75rem 1.25rem 3rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
   cursor: pointer;
 }
 
-.dropzone-title {
-  font-size: 1.35rem;
+.slot-title {
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
-.dropzone-hint {
+.slot-optional {
+  font-size: 0.85rem;
+  color: var(--campo);
+}
+
+.slot-hint {
+  flex-basis: 100%;
+  font-size: 0.9rem;
   color: color-mix(in srgb, var(--tinta) 72%, white);
 }
 
-.dropzone-types {
-  margin-top: 0.65rem;
-  font-size: 0.95rem;
+.slot-empty {
+  margin-top: auto;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--tinta) 72%, white);
 }
 
-.dropzone-seal {
-  position: absolute;
-  right: 0.85rem;
-  bottom: 0.65rem;
-  margin: 0;
-  padding: 0.2rem 0.45rem;
-  border: 1.5px solid var(--campo);
-  color: var(--campo);
-  font-size: 0.78rem;
-  font-weight: 700;
-  transform: rotate(-3deg);
-  background: var(--papel);
+.slot-file {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.65rem;
+  align-items: baseline;
+  margin-top: auto;
 }
 
 .session {
@@ -268,24 +307,22 @@ body {
     font-size: 1.65rem;
   }
 
-  .file-row {
+  .slot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .slot-file {
     grid-template-columns: 1fr auto;
   }
 
-  .file-size {
+  .slot-file .file-size {
     grid-column: 1;
     grid-row: 2;
   }
 
-  .file-row .linkish {
+  .slot-file .linkish {
     grid-column: 2;
     grid-row: 1 / span 2;
     align-self: center;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dropzone-seal {
-    transform: none;
   }
 }

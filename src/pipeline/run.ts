@@ -1,10 +1,14 @@
 import { roundMoney, toNumber, type Row } from "./cell";
 import { processConveniar, valorPagoPorCpf, type ConveniarFile } from "./conveniar";
 import { formatarCpf } from "./formatCpf";
+import { cruzarFaltantes, processInscritos } from "./inscritos";
 import {
   cpfsDosEditais,
   idsFinalizados,
+  infoFinalizados,
   semCpfs,
+  situacaoMatriculaFinal,
+  statusFinalDoMotivo,
 } from "./matriculados";
 import { toPlanilhaCpfRow } from "./planilhaCols";
 import { processSistema } from "./sistema";
@@ -15,6 +19,7 @@ export type PipelineInput = {
   sistema: Row[];
   planilhaAntiga: Row[];
   matriculados?: Row[];
+  inscritos?: Row[];
   now?: Date;
 };
 
@@ -43,6 +48,7 @@ export function runPipeline(input: PipelineInput): PipelineResult {
   const matriculados = input.matriculados ?? [];
   const cpfs2024 = cpfsDosEditais(matriculados);
   const finalizados = idsFinalizados(matriculados);
+  const finalizadosInfo = infoFinalizados(matriculados);
 
   const institutos = semCpfs(
     processConveniar(input.conveniar, input.equipe),
@@ -53,7 +59,7 @@ export function runPipeline(input: PipelineInput): PipelineResult {
   const cpfsSistema = new Set(sistema.map((row) => String(row.CPF)));
   const sistemaConveniar = sistema.filter((row) => pagos.has(String(row.CPF)));
 
-  const ausentes = institutos
+  const faltantes = institutos
     .filter((row) => !cpfsSistema.has(String(row.CPF)))
     .sort((a, b) =>
       `${a.Instituto}|${a.Descrição}|${a.Nome}`.localeCompare(
@@ -61,6 +67,10 @@ export function runPipeline(input: PipelineInput): PipelineResult {
         "pt-BR",
       ),
     );
+  const ausentes = cruzarFaltantes(
+    faltantes,
+    processInscritos(input.inscritos ?? []),
+  );
 
   const desistencia = new Map<string, Pick<Row, "DESISTIU?" | "DATA DA DESISTÊNCIA">>();
   for (const row of sistema) {
@@ -95,24 +105,43 @@ export function runPipeline(input: PipelineInput): PipelineResult {
       };
     });
 
-  const planilhaCpf: Row[] = [...antiga, ...novos]
-    .map((row) => {
-      if (row.OBSERVAÇÃO !== "OK") return row;
-      const valor = pagos.get(String(row.CPF));
+  const planilhaCpf: Row[] = [];
+  const inscricoesVistas = new Set<string>();
+  for (const row of [...antiga, ...novos]) {
+    let next = row;
+    if (next.OBSERVAÇÃO === "OK") {
+      const valor = pagos.get(String(next.CPF));
       if (valor == null) {
-        const id = inscricaoKey(row["N° INSCRIÇÃO"]);
-        return {
-          ...row,
+        const id = inscricaoKey(next["N° INSCRIÇÃO"]);
+        next = {
+          ...next,
           OBSERVAÇÃO: finalizados.has(id) ? "Curso Finalizado" : "Sem pagamento",
         };
+      } else {
+        next = {
+          ...next,
+          "VALOR RECEBIDO": roundMoney(toNumber(next["VALOR RECEBIDO"]) + valor),
+          QUANTIDADE: toNumber(next.QUANTIDADE) + 1,
+        };
       }
-      return {
-        ...row,
-        "VALOR RECEBIDO": roundMoney(toNumber(row["VALOR RECEBIDO"]) + valor),
-        QUANTIDADE: toNumber(row.QUANTIDADE) + 1,
+    }
+
+    const info = finalizadosInfo.get(inscricaoKey(next["N° INSCRIÇÃO"]));
+    if (info) {
+      next = {
+        ...next,
+        "SITUAÇÃO CURSO": "FINALIZADO",
+        "SITUAÇÃO MATRÍCULA": situacaoMatriculaFinal(info.situacaoMatricula),
+        "STATUS FINAL": statusFinalDoMotivo(info.motivo),
       };
-    })
-    .map(toPlanilhaCpfRow);
+    }
+
+    const keyed = toPlanilhaCpfRow(next);
+    const inscricao = inscricaoKey(keyed["N° INSCRIÇÃO"]);
+    if (inscricoesVistas.has(inscricao)) continue;
+    inscricoesVistas.add(inscricao);
+    planilhaCpf.push(keyed);
+  }
 
   return {
     ausentes,
@@ -121,7 +150,7 @@ export function runPipeline(input: PipelineInput): PipelineResult {
     resumo: {
       conveniar: institutos.length,
       noSistema: sistemaConveniar.length,
-      ausentes: ausentes.length,
+      ausentes: faltantes.length,
       novos: novos.length,
       cpfs2024: cpfs2024.length,
     },

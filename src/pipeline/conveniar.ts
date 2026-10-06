@@ -6,14 +6,16 @@ export type ConveniarFile = {
   rows: Row[];
 };
 
-const INSTITUTOS_NOTEBOOK = new Set([
+export const INSTITUTOS_CONVENIAR = [
   "IFES",
   "IFF",
   "IFMG",
   "IFPE",
   "IFPR",
   "IFSP",
-]);
+] as const;
+
+const INSTITUTOS_NOTEBOOK = new Set<string>(INSTITUTOS_CONVENIAR);
 
 function cursoDoHistorico(historico: string): string {
   return historico.match(/;([^;]+);/)?.[1] ?? "";

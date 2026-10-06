@@ -2,6 +2,7 @@ export type FileRole =
   | "conveniar"
   | "equipe"
   | "sistema"
+  | "inscritos"
   | "planilha_cpf"
   | "matriculados"
   | "unknown";
@@ -36,6 +37,7 @@ export function classifyByName(filename: string): Classified {
     return { role: "matriculados" };
   }
   if (/planilha\s*cpf/i.test(filename)) return { role: "planilha_cpf" };
+  if (/inscric/i.test(filename)) return { role: "inscritos" };
   if (/lancamentos/i.test(filename)) {
     return {
       role: "conveniar",
@@ -49,6 +51,12 @@ export function classifyByHeaders(headers: string[]): FileRole {
   const h = headers.map((header) => header.trim().toLowerCase());
   if (h.includes("cpf/cnpj") && h.some((x) => x.includes("favorecido"))) {
     return "conveniar";
+  }
+  if (
+    h.includes("turno") &&
+    (h.includes("número de inscrição") || h.includes("nome civil"))
+  ) {
+    return "inscritos";
   }
   if (h.includes("número de inscrição") || h.includes("nome civil")) {
     return "sistema";
@@ -65,11 +73,21 @@ export function classifyByHeaders(headers: string[]): FileRole {
 
 export function classifyFile(filename: string, headers: string[]): Classified {
   const byName = classifyByName(filename);
+  const headerRole = classifyByHeaders(headers);
+  if (
+    byName.role !== "unknown" &&
+    headerRole !== "unknown" &&
+    byName.role !== headerRole
+  ) {
+    return { role: "unknown" };
+  }
   if (byName.role !== "unknown") return byName;
-  const role = classifyByHeaders(headers);
   return {
-    role,
-    instituto: role === "conveniar" ? (institutoFromName(filename) ?? "DESCONHECIDO") : undefined,
+    role: headerRole,
+    instituto:
+      headerRole === "conveniar"
+        ? (institutoFromName(filename) ?? "DESCONHECIDO")
+        : undefined,
   };
 }
 
@@ -80,6 +98,7 @@ export function missingRequiredRoles(filenames: string[]): string[] {
     missing.push("extrato Conveniar (IF…_LancamentosGestorFinanceiro)");
   }
   if (!roles.includes("sistema")) missing.push("matriculados_sistema");
+  if (!roles.includes("inscritos")) missing.push("inscricoes-geral");
   if (!roles.includes("planilha_cpf")) missing.push("Planilha CPF antiga");
   if (!roles.includes("matriculados")) {
     missing.push("Matriculados (aba Matrículas Consolidadas)");
@@ -94,7 +113,9 @@ export function roleLabel(classified: Classified): string {
     case "equipe":
       return "Docentes e equipe";
     case "sistema":
-      return "Inscrições";
+      return "Matriculados do sistema";
+    case "inscritos":
+      return "Inscrições geral";
     case "planilha_cpf":
       return "Planilha CPF";
     case "matriculados":

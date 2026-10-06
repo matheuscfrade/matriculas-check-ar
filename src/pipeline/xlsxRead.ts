@@ -1,6 +1,39 @@
-import { inflateSync, strFromU8 } from "fflate";
+import { Inflate, strFromU8 } from "fflate";
 import type { Row } from "./cell";
 import { PLANILHA_CPF_COLS } from "./planilhaCols";
+
+export const MAX_INFLATE_BYTES = 64 * 1024 * 1024;
+
+function concatBytes(chunks: Uint8Array[], total: number): Uint8Array {
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
+
+function inflateCapped(payload: Uint8Array, claimed: number): Uint8Array {
+  if (claimed > MAX_INFLATE_BYTES) {
+    throw new Error("ZIP descomprimido grande demais");
+  }
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  let overflow = false;
+  const inf = new Inflate((chunk) => {
+    if (overflow) return;
+    if (total + chunk.length > MAX_INFLATE_BYTES) {
+      overflow = true;
+      return;
+    }
+    total += chunk.length;
+    chunks.push(chunk);
+  });
+  inf.push(payload, true);
+  if (overflow) throw new Error("ZIP descomprimido grande demais");
+  return concatBytes(chunks, total);
+}
 
 function u16(data: Uint8Array, i: number): number {
   return data[i]! | (data[i + 1]! << 8);
@@ -34,6 +67,7 @@ function extractZip(
     if (u32(data, offset) !== 0x02014b50) throw new Error("ZIP inválido");
     const method = u16(data, offset + 10);
     const csz = u32(data, offset + 20);
+    const usz = u32(data, offset + 24);
     const nameLen = u16(data, offset + 28);
     const extraLen = u16(data, offset + 30);
     const commentLen = u16(data, offset + 32);
@@ -48,8 +82,11 @@ function extractZip(
     const locExtra = u16(data, localOff + 28);
     const start = localOff + 30 + locName + locExtra;
     const payload = data.subarray(start, start + csz);
+    if (usz > MAX_INFLATE_BYTES || payload.length > MAX_INFLATE_BYTES) {
+      throw new Error("ZIP descomprimido grande demais");
+    }
     if (method === 0) out.set(name, payload);
-    else if (method === 8) out.set(name, inflateSync(payload));
+    else if (method === 8) out.set(name, inflateCapped(payload, usz));
     else throw new Error(`ZIP compactação ${method}`);
   }
   return out;

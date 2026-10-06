@@ -1,6 +1,6 @@
 export const MAX_FILE_BYTES = 30 * 1024 * 1024;
 export const MAX_FILES = 30;
-export const ACCEPTED_EXTENSIONS = [".xlsx", ".xls", ".csv"] as const;
+export const ACCEPTED_EXTENSIONS = [".xlsx", ".csv"] as const;
 
 export type RejectReason = "type" | "size" | "count";
 

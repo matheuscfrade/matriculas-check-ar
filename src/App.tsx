@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { addFiles, clearFiles, removeFile } from "./files/store";
+import { missingSlots, slotById } from "./files/slots";
+import { clearFiles, removeSlot, setSlotFile } from "./files/store";
 import type { FileError, FileHandle } from "./files/types";
-import { classifyByName, classifyFile, missingRequiredRoles } from "./pipeline/classify";
+import { classifyByHeaders, classifyFile } from "./pipeline/classify";
 import { messageForReadError, readSheet } from "./pipeline/io";
 import { runPipeline, type PipelineResult } from "./pipeline/run";
 import type { ConveniarFile } from "./pipeline/conveniar";
 import { cell, type Row } from "./pipeline/cell";
 import { ABA_MATRICULAS_CONSOLIDADAS } from "./pipeline/matriculados";
-import { Dropzone } from "./ui/Dropzone";
 import { FileList } from "./ui/FileList";
+import { FileSlots } from "./ui/FileSlots";
 import { PrivacyBanner } from "./ui/PrivacyBanner";
 import { Results } from "./ui/Results";
 
@@ -46,7 +47,24 @@ const SISTEMA_COLS = [
   "DATA DA DESISTÊNCIA",
 ];
 
-const MATRICULADOS_COLS = ["Edital", "ID", "CPF", "Status"];
+const MATRICULADOS_COLS = [
+  "Edital",
+  "ID",
+  "CPF",
+  "Status",
+  "Situação de matrícula",
+  "Motivo",
+];
+
+const INSCRITOS_COLS = [
+  "EDITAL",
+  "NÚMERO DE INSCRIÇÃO",
+  "CPF",
+  "NOME CIVIL",
+  "INSTITUTO",
+  "CURSO",
+  "TURNO",
+];
 
 function pickColumns(rows: Row[], names: string[]): Row[] {
   return rows.map((row) => {
@@ -66,7 +84,7 @@ function yieldToBrowser() {
 }
 
 function missingRoles(files: FileHandle[]): string[] {
-  return missingRequiredRoles(files.map((file) => file.name));
+  return missingSlots(files);
 }
 
 export default function App() {
@@ -77,16 +95,18 @@ export default function App() {
   const [runError, setRunError] = useState<string | null>(null);
   const [result, setResult] = useState<PipelineResult | null>(null);
 
-  function onFiles(incoming: File[]) {
-    const { next, errors: nextErrors } = addFiles(files, incoming);
+  function onSlotFile(slotId: string, incoming: File[]) {
+    const file = incoming[0];
+    if (!file) return;
+    const { next, errors: nextErrors } = setSlotFile(files, slotId, file);
     setFiles(next);
     setErrors(nextErrors);
     setResult(null);
     setRunError(null);
   }
 
-  function onRemove(id: string) {
-    setFiles((current) => removeFile(current, id));
+  function onRemoveSlot(slotId: string) {
+    setFiles((current) => removeSlot(current, slotId));
     setResult(null);
   }
 
@@ -108,6 +128,7 @@ export default function App() {
       const conveniar: ConveniarFile[] = [];
       let equipe: Row[] = [];
       let sistema: Row[] = [];
+      let inscritos: Row[] = [];
       let planilhaAntiga: Row[] = [];
       let matriculados: Row[] = [];
 
@@ -115,14 +136,14 @@ export default function App() {
         const handle = files[i];
         if (!handle) continue;
         setProgress(`Lendo ${handle.name} (${i + 1}/${files.length})`);
+        const slot = slotById(handle.slotId);
         let rows: Row[];
         let headers: string[];
         try {
           const buffer = await handle.file.arrayBuffer();
-          const byName = classifyByName(handle.name);
           const parsed = readSheet(
             buffer,
-            byName.role === "matriculados"
+            slot?.role === "matriculados"
               ? { preferSheet: ABA_MATRICULAS_CONSOLIDADAS }
               : undefined,
           );
@@ -133,18 +154,30 @@ export default function App() {
           return;
         }
         const classified = classifyFile(handle.name, headers);
-        if (classified.role === "conveniar") {
+        const headerRole = classifyByHeaders(headers);
+        if (slot && headerRole !== "unknown" && headerRole !== slot.role) {
+          setRunError(
+            `${handle.name}: o conteúdo não corresponde a ${slot.label}.`,
+          );
+          return;
+        }
+        const role = slot?.role ?? classified.role;
+        const instituto =
+          slot?.instituto ?? classified.instituto ?? "DESCONHECIDO";
+        if (role === "conveniar") {
           conveniar.push({
-            instituto: classified.instituto ?? "DESCONHECIDO",
+            instituto,
             rows: pickColumns(rows, CONVENIAR_COLS),
           });
-        } else if (classified.role === "equipe") {
+        } else if (role === "equipe") {
           equipe = equipe.concat(pickColumns(rows, ["CPF"]));
-        } else if (classified.role === "sistema") {
+        } else if (role === "sistema") {
           sistema = sistema.concat(pickColumns(rows, SISTEMA_COLS));
-        } else if (classified.role === "planilha_cpf") {
+        } else if (role === "inscritos") {
+          inscritos = inscritos.concat(pickColumns(rows, INSCRITOS_COLS));
+        } else if (role === "planilha_cpf") {
           planilhaAntiga = planilhaAntiga.concat(rows);
-        } else if (classified.role === "matriculados") {
+        } else if (role === "matriculados") {
           matriculados = matriculados.concat(
             pickColumns(rows, MATRICULADOS_COLS),
           );
@@ -159,7 +192,7 @@ export default function App() {
         matriculados.length === 0
       ) {
         setRunError(
-          "Não foi possível identificar todos os arquivos. Confira os nomes: LancamentosGestorFinanceiro, matriculados_sistema, Planilha CPF e Matriculados.",
+          "Não foi possível identificar todos os arquivos. Confira cada espaço: um extrato Conveniar, matriculados_sistema, inscricoes-geral, Planilha CPF e Matriculados.",
         );
         return;
       }
@@ -170,6 +203,7 @@ export default function App() {
           conveniar,
           equipe,
           sistema,
+          inscritos,
           planilhaAntiga,
           matriculados,
         }),
@@ -191,13 +225,12 @@ export default function App() {
       </header>
 
       <main>
-        <Dropzone onFiles={onFiles} />
-        <FileList
+        <FileSlots
           files={files}
-          errors={errors}
-          onRemove={onRemove}
-          onClear={onClear}
+          onSlotFile={onSlotFile}
+          onRemoveSlot={onRemoveSlot}
         />
+        <FileList files={files} errors={errors} onClear={onClear} />
 
         <p className="soon">
           <button
@@ -210,7 +243,7 @@ export default function App() {
           </button>
           <span>
             {missing.length > 0
-              ? `Falta: ${missing.join("; ")}. Docentes e Equipe é opcional.`
+              ? `Falta: ${missing.join("; ")}. Docentes e equipe é opcional.`
               : "O cruzamento roda neste computador. Depois você baixa a Planilha CPF e os CPFs ausentes."}
           </span>
         </p>

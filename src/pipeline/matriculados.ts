@@ -20,27 +20,74 @@ export const EDITAIS_2024 = [
   "141/2024",
 ] as const;
 
+function cpfDaLinha(row: Row): string | null {
+  const raw = cell(row, "CPF");
+  if (raw == null || String(raw).trim() === "") return null;
+  return formatarCpf(raw);
+}
+
 export function cpfsDosEditais(
   rows: Row[],
   editais: readonly string[] = EDITAIS_2024,
 ): string[] {
   const wanted = new Set(editais);
-  const cpfs: string[] = [];
+  const bruto = new Set<string>();
+  const preservar = new Set<string>();
   for (const row of rows) {
-    if (!wanted.has(cellStr(row, "Edital").trim())) continue;
-    cpfs.push(formatarCpf(cell(row, "CPF")));
+    const cpf = cpfDaLinha(row);
+    if (!cpf) continue;
+    if (wanted.has(cellStr(row, "Edital").trim())) bruto.add(cpf);
+    else preservar.add(cpf);
   }
-  return cpfs;
+  return [...bruto].filter((cpf) => !preservar.has(cpf));
 }
 
-export function idsFinalizados(rows: Row[]): Set<string> {
-  const ids = new Set<string>();
+export type FinalizadoInfo = {
+  situacaoMatricula: string;
+  motivo: string;
+};
+
+export function infoFinalizados(rows: Row[]): Map<string, FinalizadoInfo> {
+  const map = new Map<string, FinalizadoInfo>();
   for (const row of rows) {
     if (cellStr(row, "Status").trim() !== "Finalizado") continue;
     const id = String(cell(row, "ID") ?? "").trim();
-    if (id) ids.add(id);
+    if (!id) continue;
+    map.set(id, {
+      situacaoMatricula: cellStr(
+        row,
+        "Situação de matrícula",
+        "Situacao de matricula",
+      ),
+      motivo: cellStr(row, "Motivo"),
+    });
   }
-  return ids;
+  return map;
+}
+
+export function idsFinalizados(rows: Row[]): Set<string> {
+  return new Set(infoFinalizados(rows).keys());
+}
+
+const SITUACAO_MATRICULA: Record<string, string> = {
+  Concluído: "CONCLUIDO",
+  Evasão: "EVASÃO",
+  Cancelada: "CANCELADO",
+};
+
+const MOTIVO_STATUS: Record<string, string> = {
+  Aprovado: "APROVADO",
+  Reprovado: "REPROVADO",
+};
+
+export function situacaoMatriculaFinal(value: string): string {
+  return SITUACAO_MATRICULA[value] ?? "";
+}
+
+export function statusFinalDoMotivo(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return MOTIVO_STATUS[trimmed] ?? trimmed;
 }
 
 export function semCpfs(institutos: Row[], cpfs: Iterable<string>): Row[] {

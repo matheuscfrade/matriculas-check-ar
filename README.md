@@ -2,7 +2,7 @@
 
 Página para gestores da FAIFSUL conferirem planilhas de matrícula e pagamento do programa Autonomia e Renda.
 
-Recebe as planilhas no navegador, replica o cruzamento do `Monta_PlanilhaCPF_02_10_26.ipynb` e devolve a Planilha CPF atualizada e a lista de CPFs ausentes. Nada sobe para servidor.
+Recebe as planilhas no navegador, replica o cruzamento do `Monta_PlanilhaCPF.ipynb` e devolve a Planilha CPF atualizada e a lista de CPFs ausentes. Nada sobe para servidor.
 
 ## Privacidade (LGPD)
 
@@ -21,7 +21,7 @@ Ao publicar, use hospedagem **só estática** (GitHub Pages, Cloudflare Pages, p
 
 https://matheuscfrade.github.io/matriculas-check-ar/
 
-O GitHub Actions gera o site estático. Planilhas, testes (`*.test.ts`) e notebooks **não entram no repositório**.
+O GitHub Actions gera o site estático e roda os testes. Planilhas e notebooks **não entram no repositório**.
 
 ## Como rodar localmente
 
@@ -32,18 +32,19 @@ npm test
 npm run build
 ```
 
-Os testes ficam só na sua máquina (estão no `.gitignore`).
-
 ## Arquivos de entrada
 
-O nome do arquivo define o papel (como no notebook):
+Há um espaço para cada arquivo. O nome ajuda a conferir se o arquivo caiu no lugar certo:
 
-- `IFPE_LancamentosGestorFinanceiro.xlsx` (e os demais IFs do notebook: IFES, IFF, IFMG, IFPE, IFPR, IFSP) — extrato Conveniar. `IFSUL_Lancamentos…` pode ir na lista; esta rodada não entra no cruzamento.
+- Um espaço por IF (IFES, IFF, IFMG, IFPE, IFPR, IFSP) para `IF…_LancamentosGestorFinanceiro.xlsx`. Basta os IFs da conferência. Para incluir outro instituto no futuro, acrescenta-se um espaço.
 - `Docentes e Equipe.xlsx` — CPFs a excluir (opcional)
-- `matriculados_sistema.xlsx` — inscrições
+- `matriculados_sistema.xlsx` — matrículas do sistema de inscrições
+- `inscricoes-geral.csv` — inscrições geral, para ID e edital dos CPFs ausentes
 - `Planilha CPF antiga.xlsx` — base a atualizar
 - `Matriculados.xlsx` — export do Google Sheet Matriculados. Se o arquivo tiver várias abas, o cruzamento usa **Matrículas Consolidadas**. Sem esse arquivo o botão Cruzar fica desabilitado.
 
+O cruzamento preserva CPFs de editais 2024 que voltaram em edital posterior, atualiza situação e status final dos IDs finalizados na Matriculados, e devolve os CPFs ausentes com possíveis IDs e editais.
+
 Saídas (download local): `PlanilhaCPF.xlsx` e `CPFs_ausentes.xlsx`.
 
-Limites: 30 arquivos, 30 MB cada, só Excel e CSV. O cruzamento roda na memória da aba. Planilhas `.xlsx` usam a primeira aba, exceto Matriculados, que prefere **Matrículas Consolidadas**.
+Limites: 30 arquivos, 30 MB cada, só `.xlsx` e `.csv` (salve `.xls` antigo como `.xlsx` ou CSV). O cruzamento roda na memória da aba. Planilhas `.xlsx` usam a primeira aba, exceto Matriculados, que prefere **Matrículas Consolidadas**.

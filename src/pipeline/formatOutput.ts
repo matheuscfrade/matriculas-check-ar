@@ -6,6 +6,7 @@ const NUMBER_COLS = new Set([
   "N° INSCRIÇÃO",
   "Nº INSCRIÇÃO",
   "NÚMERO DE INSCRIÇÃO",
+  "NÚMERO DE INSCRIÇÃO_INSCRIÇÃO",
   "VALOR RECEBIDO",
   "QUANTIDADE",
   "VALOR PAGO",
@@ -41,26 +42,34 @@ function isPlaceholder(value: string): boolean {
   return /[A-Za-zÀ-ÿ]/.test(value);
 }
 
+function neutralizeFormula(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+}
+
 export function formatOutputCell(
   column: string,
   value: unknown,
 ): string | number {
   if (isBlank(value)) return "";
 
-  if (isCpfCol(column)) return formatarCpf(value);
+  if (isCpfCol(column)) return neutralizeFormula(formatarCpf(value));
 
-  if (isDateCol(column)) return formatDate(value);
+  if (isDateCol(column)) return neutralizeFormula(formatDate(value));
 
   if (isNumberCol(column)) {
-    if (typeof value === "string" && isPlaceholder(value)) return value.trim();
+    if (typeof value === "string" && isPlaceholder(value)) {
+      return neutralizeFormula(value.trim());
+    }
     const n = toNumber(value);
     return /valor/i.test(column) ? roundMoney(n) : n;
   }
 
-  if (typeof value === "string") return value.trim();
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  if (value instanceof Date) return formatDate(value);
-  return String(value);
+  if (typeof value === "string") return neutralizeFormula(value.trim());
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return neutralizeFormula(String(value));
+  }
+  if (value instanceof Date) return neutralizeFormula(formatDate(value));
+  return neutralizeFormula(String(value));
 }
 
 export function formatOutputRow(row: Row): Row {

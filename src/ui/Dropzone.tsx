@@ -1,10 +1,21 @@
 import { useId, useRef, useState, type DragEvent, type ChangeEvent } from "react";
+import { formatBytes } from "../files/format";
+import type { FileSlot } from "../files/slots";
+import type { FileHandle } from "../files/types";
 
-type DropzoneProps = {
-  onFiles: (files: File[]) => void;
+type SlotDropzoneProps = {
+  slot: FileSlot;
+  file: FileHandle | null;
+  onFile: (files: File[]) => void;
+  onRemove: () => void;
 };
 
-export function Dropzone({ onFiles }: DropzoneProps) {
+export function SlotDropzone({
+  slot,
+  file,
+  onFile,
+  onRemove,
+}: SlotDropzoneProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
@@ -12,7 +23,8 @@ export function Dropzone({ onFiles }: DropzoneProps) {
 
   function take(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
-    onFiles(Array.from(fileList));
+    const first = fileList[0];
+    if (first) onFile([first]);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -45,9 +57,18 @@ export function Dropzone({ onFiles }: DropzoneProps) {
     take(event.target.files);
   }
 
+  const stateClass = [
+    "slot",
+    over ? "is-over" : "",
+    file ? "is-filled" : "",
+    slot.required ? "" : "is-optional",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div
-      className={over ? "dropzone is-over" : "dropzone"}
+      className={stateClass}
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -58,16 +79,31 @@ export function Dropzone({ onFiles }: DropzoneProps) {
         id={inputId}
         className="sr-only"
         type="file"
-        accept=".xlsx,.xls,.csv"
-        multiple
+        accept=".xlsx,.csv"
         onChange={onChange}
       />
-      <label htmlFor={inputId} className="dropzone-label">
-        <span className="dropzone-title">Solte as planilhas aqui</span>
-        <span className="dropzone-hint">ou clique para escolher</span>
-        <span className="dropzone-types">.xlsx · .xls · .csv</span>
-      </label>
-      <p className="dropzone-seal">Uso interno · dados não saem daqui</p>
+      <div className="slot-head">
+        <label htmlFor={inputId} className="slot-label">
+          <span className="slot-title">{slot.label}</span>
+          {slot.required ? null : (
+            <span className="slot-optional">opcional</span>
+          )}
+          <span className="slot-hint">{slot.hint}</span>
+        </label>
+      </div>
+      {file ? (
+        <div className="slot-file">
+          <span className="file-name">{file.name}</span>
+          <span className="file-size">{formatBytes(file.size)}</span>
+          <button type="button" className="linkish" onClick={onRemove}>
+            Remover
+          </button>
+        </div>
+      ) : (
+        <label htmlFor={inputId} className="slot-empty">
+          Solte o arquivo aqui ou clique para escolher
+        </label>
+      )}
     </div>
   );
 }

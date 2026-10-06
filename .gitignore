@@ -12,15 +12,15 @@ dist
 dist-ssr
 *.local
 
-# Testes ficam só na máquina local
-**/*.test.ts
-**/*.tmp.test.ts
-
 # LGPD — planilhas, notebooks e dumps nunca sobem
 *.xlsx
 *.xls
 *.xlsm
 *.csv
+*.ods
+*.tsv
+*.parquet
+*.pkl
 *.ipynb
 Planilhas/
 Arquivos Output/

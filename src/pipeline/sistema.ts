@@ -12,7 +12,7 @@ import {
 
 const EDITAL_RE = /n[º°]\s*(\d{2,3}\/\d{4})/i;
 
-function edital(value: string): string {
+export function extractEdital(value: string): string {
   return value.match(EDITAL_RE)?.[1] ?? "";
 }
 
@@ -44,7 +44,7 @@ export function processSistema(rows: Row[], agora = new Date()): Row[] {
     const inscricao = toNumber(cell(row, "NÚMERO DE INSCRIÇÃO"));
 
     return {
-      EDITAL: edital(cellStr(row, "EDITAL")),
+      EDITAL: extractEdital(cellStr(row, "EDITAL")),
       "N° INSCRIÇÃO": inscricao,
       "NOME COMPLETO": cellStr(row, "NOME CIVIL"),
       CPF: formatarCpf(cell(row, "CPF")),

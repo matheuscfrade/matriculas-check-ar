@@ -1,98 +1,22 @@
 import * as XLSX from "xlsx";
 import type { Row } from "./cell";
 import { formatOutputCell, outputKind } from "./formatOutput";
+import { readCsv } from "./csvRead";
 import { readXlsx } from "./xlsxRead";
-
-const READ_OPTS: XLSX.ParsingOptions = {
-  type: "array",
-  dense: true,
-  sheets: 0,
-  cellDates: true,
-  cellHTML: false,
-  cellFormula: false,
-  cellStyles: false,
-  cellText: false,
-  sheetStubs: false,
-};
-
-function shrinkUsedRange(sheet: XLSX.WorkSheet) {
-  let minR = Infinity;
-  let minC = Infinity;
-  let maxR = 0;
-  let maxC = 0;
-  let found = false;
-
-  if (Array.isArray(sheet)) {
-    for (let r = 0; r < sheet.length; r += 1) {
-      const row = sheet[r] as unknown[] | undefined;
-      if (!row) continue;
-      for (let c = 0; c < row.length; c += 1) {
-        if (row[c] == null) continue;
-        found = true;
-        if (r < minR) minR = r;
-        if (c < minC) minC = c;
-        if (r > maxR) maxR = r;
-        if (c > maxC) maxC = c;
-      }
-    }
-  } else {
-    for (const key of Object.keys(sheet)) {
-      if (key.charAt(0) === "!") continue;
-      const { r, c } = XLSX.utils.decode_cell(key);
-      found = true;
-      if (r < minR) minR = r;
-      if (c < minC) minC = c;
-      if (r > maxR) maxR = r;
-      if (c > maxC) maxC = c;
-    }
-  }
-
-  if (found) {
-    sheet["!ref"] = XLSX.utils.encode_range({
-      s: { r: minR, c: minC },
-      e: { r: maxR, c: maxC },
-    });
-  }
-}
 
 function asBytes(buffer: ArrayBuffer | Uint8Array): Uint8Array {
   return buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
 }
 
-function foldSheetName(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .trim()
-    .toLowerCase();
-}
-
-function pickSheetName(names: string[], preferSheet?: string): string | undefined {
-  if (preferSheet) {
-    const want = foldSheetName(preferSheet);
-    const match = names.find((name) => foldSheetName(name) === want);
-    if (match) return match;
+function looksLikeMarkup(bytes: Uint8Array): boolean {
+  let i = 0;
+  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+    i = 3;
   }
-  return names[0];
-}
-
-function readWithSheetJS(
-  buffer: ArrayBuffer | Uint8Array,
-  preferSheet?: string,
-): { headers: string[]; rows: Row[] } {
-  const opts = preferSheet ? { ...READ_OPTS, sheets: undefined } : READ_OPTS;
-  const wb = XLSX.read(buffer, opts);
-  const name = pickSheetName(wb.SheetNames, preferSheet);
-  if (!name) return { headers: [], rows: [] };
-  const sheet = wb.Sheets[name];
-  if (!sheet) return { headers: [], rows: [] };
-  shrinkUsedRange(sheet);
-  const rows = XLSX.utils.sheet_to_json<Row>(sheet, {
-    raw: true,
-    blankrows: false,
-  });
-  const headers = rows[0] ? Object.keys(rows[0]) : [];
-  return { headers, rows };
+  while (i < bytes.length && (bytes[i] === 0x20 || bytes[i] === 0x09 || bytes[i] === 0x0a || bytes[i] === 0x0d)) {
+    i += 1;
+  }
+  return bytes[i] === 0x3c;
 }
 
 export function readSheet(
@@ -103,7 +27,19 @@ export function readSheet(
   if (bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b) {
     return readXlsx(bytes, opts?.preferSheet);
   }
-  return readWithSheetJS(bytes, opts?.preferSheet);
+  if (
+    bytes.length >= 4 &&
+    bytes[0] === 0xd0 &&
+    bytes[1] === 0xcf &&
+    bytes[2] === 0x11 &&
+    bytes[3] === 0xe0
+  ) {
+    throw new Error("Arquivo .xls antigo. Salve como .xlsx ou CSV.");
+  }
+  if (looksLikeMarkup(bytes)) {
+    throw new Error("Arquivo não é planilha CSV ou xlsx.");
+  }
+  return readCsv(bytes);
 }
 
 function sheetHeader(rows: Row[]): string[] {
