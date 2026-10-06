@@ -2,7 +2,7 @@ import { Inflate, strFromU8 } from "fflate";
 import type { Row } from "./cell";
 import { PLANILHA_CPF_COLS } from "./planilhaCols";
 
-export const MAX_INFLATE_BYTES = 64 * 1024 * 1024;
+export const MAX_INFLATE_BYTES = 512 * 1024 * 1024;
 
 function concatBytes(chunks: Uint8Array[], total: number): Uint8Array {
   const out = new Uint8Array(total);
