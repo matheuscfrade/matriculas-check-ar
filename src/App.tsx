@@ -2,7 +2,11 @@ import { useState } from "react";
 import { missingSlots, slotById } from "./files/slots";
 import { clearFiles, removeSlot, setSlotFile } from "./files/store";
 import type { FileError, FileHandle } from "./files/types";
-import { classifyByHeaders, classifyFile } from "./pipeline/classify";
+import {
+  classifyByHeaders,
+  classifyFile,
+  roleFitsSlot,
+} from "./pipeline/classify";
 import { messageForReadError, readSheet } from "./pipeline/io";
 import { runPipeline, type PipelineResult } from "./pipeline/run";
 import type { ConveniarFile } from "./pipeline/conveniar";
@@ -155,7 +159,7 @@ export default function App() {
         }
         const classified = classifyFile(handle.name, headers);
         const headerRole = classifyByHeaders(headers);
-        if (slot && headerRole !== "unknown" && headerRole !== slot.role) {
+        if (slot && !roleFitsSlot(slot.role, headerRole)) {
           setRunError(
             `${handle.name}: o conteúdo não corresponde a ${slot.label}.`,
           );

@@ -4,6 +4,7 @@ import {
   classifyByName,
   classifyFile,
   missingRequiredRoles,
+  roleFitsSlot,
 } from "./classify";
 
 describe("classifyByName", () => {
@@ -85,6 +86,32 @@ describe("classifyByHeaders", () => {
         "TURNO",
       ]),
     ).toBe("inscritos");
+  });
+
+  it("mantém matriculados_sistema mesmo quando também tem TURNO", () => {
+    expect(
+      classifyByHeaders([
+        "EDITAL",
+        "NÚMERO DE INSCRIÇÃO",
+        "NOME CIVIL",
+        "CPF",
+        "TURNO",
+        "CATEGORIA DO CURSO",
+        "CIDADE DO CAMPUS",
+        "DATA DE NASCIMENTO",
+      ]),
+    ).toBe("sistema");
+  });
+});
+
+describe("roleFitsSlot", () => {
+  it("aceita sistema e inscrições geral um no espaço do outro", () => {
+    expect(roleFitsSlot("sistema", "inscritos")).toBe(true);
+    expect(roleFitsSlot("inscritos", "sistema")).toBe(true);
+  });
+
+  it("recusa extrato Conveniar no espaço do sistema", () => {
+    expect(roleFitsSlot("sistema", "conveniar")).toBe(false);
   });
 });
 

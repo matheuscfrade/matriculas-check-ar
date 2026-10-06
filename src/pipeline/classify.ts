@@ -47,18 +47,33 @@ export function classifyByName(filename: string): Classified {
   return { role: "unknown" };
 }
 
+function hasInscricao(h: string[]): boolean {
+  return h.includes("número de inscrição") || h.includes("nome civil");
+}
+
+function looksLikeSistema(h: string[]): boolean {
+  if (!hasInscricao(h)) return false;
+  return (
+    h.includes("categoria do curso") ||
+    h.includes("cidade do campus") ||
+    h.includes("renda per capita") ||
+    h.includes("data de nascimento") ||
+    h.includes("desistência") ||
+    h.includes("desistiu?") ||
+    h.some((x) => x.includes("concorrência"))
+  );
+}
+
 export function classifyByHeaders(headers: string[]): FileRole {
   const h = headers.map((header) => header.trim().toLowerCase());
   if (h.includes("cpf/cnpj") && h.some((x) => x.includes("favorecido"))) {
     return "conveniar";
   }
-  if (
-    h.includes("turno") &&
-    (h.includes("número de inscrição") || h.includes("nome civil"))
-  ) {
+  if (looksLikeSistema(h)) return "sistema";
+  if (h.includes("turno") && hasInscricao(h)) {
     return "inscritos";
   }
-  if (h.includes("número de inscrição") || h.includes("nome civil")) {
+  if (hasInscricao(h)) {
     return "sistema";
   }
   if (h.includes("nome completo") && h.includes("edital")) {
@@ -69,6 +84,17 @@ export function classifyByHeaders(headers: string[]): FileRole {
   }
   if (h.includes("cpf") && headers.length <= 8) return "equipe";
   return "unknown";
+}
+
+export function roleFitsSlot(slotRole: FileRole, headerRole: FileRole): boolean {
+  if (headerRole === "unknown" || headerRole === slotRole) return true;
+  if (
+    (slotRole === "sistema" || slotRole === "inscritos") &&
+    (headerRole === "sistema" || headerRole === "inscritos")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export function classifyFile(filename: string, headers: string[]): Classified {
