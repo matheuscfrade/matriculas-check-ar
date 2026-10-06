@@ -2,7 +2,8 @@ import { Inflate, strFromU8 } from "fflate";
 import type { Row } from "./cell";
 import { PLANILHA_CPF_COLS } from "./planilhaCols";
 
-export const MAX_INFLATE_BYTES = 512 * 1024 * 1024;
+export const MAX_INFLATE_BYTES = 2 * 1024 * 1024 * 1024;
+const ZIP64_SENTINEL = 0xffffffff;
 
 function concatBytes(chunks: Uint8Array[], total: number): Uint8Array {
   const out = new Uint8Array(total);
@@ -15,7 +16,8 @@ function concatBytes(chunks: Uint8Array[], total: number): Uint8Array {
 }
 
 function inflateCapped(payload: Uint8Array, claimed: number): Uint8Array {
-  if (claimed > MAX_INFLATE_BYTES) {
+  const known = claimed > 0 && claimed < ZIP64_SENTINEL;
+  if (known && claimed > MAX_INFLATE_BYTES) {
     throw new Error("ZIP descomprimido grande demais");
   }
   const chunks: Uint8Array[] = [];
@@ -49,6 +51,72 @@ function u32(data: Uint8Array, i: number): number {
   );
 }
 
+function u64(data: Uint8Array, i: number): number {
+  const lo = u32(data, i);
+  const hi = u32(data, i + 4);
+  if (hi > 0x1fffff) return Number.POSITIVE_INFINITY;
+  return hi * 4294967296 + lo;
+}
+
+function zip64Sizes(
+  extra: Uint8Array,
+  usz: number,
+  csz: number,
+  localOff: number,
+): { usz: number; csz: number; localOff: number } {
+  let i = 0;
+  while (i + 4 <= extra.length) {
+    const id = u16(extra, i);
+    const size = u16(extra, i + 2);
+    const start = i + 4;
+    const end = start + size;
+    if (end > extra.length) break;
+    if (id === 1) {
+      let p = start;
+      if (usz === ZIP64_SENTINEL && p + 8 <= end) {
+        usz = u64(extra, p);
+        p += 8;
+      }
+      if (csz === ZIP64_SENTINEL && p + 8 <= end) {
+        csz = u64(extra, p);
+        p += 8;
+      }
+      if (localOff === ZIP64_SENTINEL && p + 8 <= end) {
+        localOff = u64(extra, p);
+      }
+      return { usz, csz, localOff };
+    }
+    i = end;
+  }
+  return { usz, csz, localOff };
+}
+
+function readCentralDirectory(data: Uint8Array): { count: number; offset: number } {
+  let eocd = data.length - 22;
+  while (eocd >= 0 && u32(data, eocd) !== 0x06054b50) eocd -= 1;
+  if (eocd < 0) throw new Error("ZIP inválido");
+  let count = u16(data, eocd + 10);
+  let offset = u32(data, eocd + 16);
+  if (count !== 0xffff && offset !== ZIP64_SENTINEL) {
+    return { count, offset };
+  }
+  const loc = eocd - 20;
+  if (loc < 0 || u32(data, loc) !== 0x07064b50) {
+    if (count === 0xffff) throw new Error("ZIP inválido");
+    return { count, offset };
+  }
+  const z64off = u64(data, loc + 8);
+  if (!Number.isFinite(z64off) || u32(data, z64off) !== 0x06064b50) {
+    throw new Error("ZIP inválido");
+  }
+  count = u64(data, z64off + 32);
+  offset = u64(data, z64off + 48);
+  if (!Number.isFinite(count) || !Number.isFinite(offset)) {
+    throw new Error("ZIP inválido");
+  }
+  return { count, offset };
+}
+
 function normName(name: string): string {
   return name.replace(/\\/g, "/").replace(/^\/+/, "").toLowerCase();
 }
@@ -58,35 +126,55 @@ function extractZip(
   want: (name: string) => boolean,
 ): Map<string, Uint8Array> {
   const out = new Map<string, Uint8Array>();
-  let eocd = data.length - 22;
-  while (eocd >= 0 && u32(data, eocd) !== 0x06054b50) eocd -= 1;
-  if (eocd < 0) throw new Error("ZIP inválido");
-  const count = u16(data, eocd + 10);
-  let offset = u32(data, eocd + 16);
+  const { count, offset: startOffset } = readCentralDirectory(data);
+  let offset = startOffset;
   for (let i = 0; i < count; i += 1) {
     if (u32(data, offset) !== 0x02014b50) throw new Error("ZIP inválido");
     const method = u16(data, offset + 10);
-    const csz = u32(data, offset + 20);
-    const usz = u32(data, offset + 24);
+    let csz = u32(data, offset + 20);
+    let usz = u32(data, offset + 24);
     const nameLen = u16(data, offset + 28);
     const extraLen = u16(data, offset + 30);
     const commentLen = u16(data, offset + 32);
-    const localOff = u32(data, offset + 42);
+    let localOff = u32(data, offset + 42);
     const name = normName(
       strFromU8(data.subarray(offset + 46, offset + 46 + nameLen)),
     );
+    const extra = data.subarray(
+      offset + 46 + nameLen,
+      offset + 46 + nameLen + extraLen,
+    );
+    ({ usz, csz, localOff } = zip64Sizes(extra, usz, csz, localOff));
     offset += 46 + nameLen + extraLen + commentLen;
     if (!want(name)) continue;
-    if (u32(data, localOff) !== 0x04034b50) throw new Error("ZIP inválido");
+    if (!Number.isFinite(localOff) || u32(data, localOff) !== 0x04034b50) {
+      throw new Error("ZIP inválido");
+    }
     const locName = u16(data, localOff + 26);
-    const locExtra = u16(data, localOff + 28);
-    const start = localOff + 30 + locName + locExtra;
+    const locExtraLen = u16(data, localOff + 28);
+    const locExtra = data.subarray(
+      localOff + 30 + locName,
+      localOff + 30 + locName + locExtraLen,
+    );
+    const locSizes = zip64Sizes(
+      locExtra,
+      u32(data, localOff + 22),
+      u32(data, localOff + 18),
+      0,
+    );
+    if (csz === ZIP64_SENTINEL) csz = locSizes.csz;
+    if (usz === ZIP64_SENTINEL) usz = locSizes.usz;
+    const start = localOff + 30 + locName + locExtraLen;
+    if (csz === ZIP64_SENTINEL || !Number.isFinite(csz)) {
+      throw new Error("ZIP descomprimido grande demais");
+    }
     const payload = data.subarray(start, start + csz);
-    if (usz > MAX_INFLATE_BYTES || payload.length > MAX_INFLATE_BYTES) {
+    const claimed = usz === ZIP64_SENTINEL ? 0 : usz;
+    if (claimed > MAX_INFLATE_BYTES || payload.length > MAX_INFLATE_BYTES) {
       throw new Error("ZIP descomprimido grande demais");
     }
     if (method === 0) out.set(name, payload);
-    else if (method === 8) out.set(name, inflateCapped(payload, usz));
+    else if (method === 8) out.set(name, inflateCapped(payload, claimed));
     else throw new Error(`ZIP compactação ${method}`);
   }
   return out;

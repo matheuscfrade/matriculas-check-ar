@@ -163,6 +163,17 @@ describe("readXlsx", () => {
     const bombed = setClaimedUncompressed(bytes, MAX_INFLATE_BYTES + 1);
     expect(() => readXlsx(bombed)).toThrow(/descomprimido/i);
   });
+
+  it("lê planilha ZIP64 cujo cabeçalho 32 bits marca 0xFFFFFFFF", () => {
+    const bytes = sistemaXlsx(
+      "<sst></sst>",
+      '<row r="1"><c r="A1" t="inlineStr"><is><t>CPF</t></is></c></row>' +
+        '<row r="2"><c r="A2" t="inlineStr"><is><t>11111111111</t></is></c></row>',
+    );
+    const marked = setClaimedUncompressed(bytes, 0xffffffff);
+    const { rows } = readXlsx(marked);
+    expect(rows[0]?.CPF).toBe("11111111111");
+  });
 });
 
 function setClaimedUncompressed(data: Uint8Array, size: number): Uint8Array {
