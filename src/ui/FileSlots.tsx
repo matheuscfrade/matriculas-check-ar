@@ -26,7 +26,8 @@ export function FileSlots({
       <section className="slot-group" aria-labelledby="slots-conveniar">
         <h2 id="slots-conveniar">Extratos Conveniar</h2>
         <p className="slot-lead">
-          Um arquivo por instituto. Pode mandar só os IFs desta conferência.
+          Um arquivo por instituto. Docentes e equipe é opcional, para excluir
+          esses CPFs. Pode mandar só os IFs desta conferência.
         </p>
         <div className="slot-grid">
           {CONVENIAR_SLOTS.map((slot) => (

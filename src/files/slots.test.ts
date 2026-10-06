@@ -8,14 +8,12 @@ import {
 
 describe("slots Conveniar", () => {
   it("tem um espaço por IF do notebook", () => {
-    expect(CONVENIAR_SLOTS.map((slot) => slot.instituto)).toEqual([
-      "IFES",
-      "IFF",
-      "IFMG",
-      "IFPE",
-      "IFPR",
-      "IFSP",
-    ]);
+    expect(
+      CONVENIAR_SLOTS.filter((slot) => slot.instituto).map(
+        (slot) => slot.instituto,
+      ),
+    ).toEqual(["IFES", "IFF", "IFMG", "IFPE", "IFPR", "IFSP", "IFSUL"]);
+    expect(CONVENIAR_SLOTS.at(-1)?.id).toBe("equipe");
   });
 });
 
@@ -51,6 +49,12 @@ describe("missingSlots", () => {
       "Planilha CPF antiga",
       "Matriculados",
     ]);
+  });
+
+  it("não libera o cruzamento só com docentes e equipe", () => {
+    expect(missingSlots([{ slotId: "equipe" }])).toContain(
+      "extrato Conveniar (pelo menos um IF)",
+    );
   });
 
   it("libera o cruzamento com um IF e as bases", () => {

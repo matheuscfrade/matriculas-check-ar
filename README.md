@@ -36,8 +36,8 @@ npm run build
 
 Há um espaço para cada arquivo. O nome ajuda a conferir se o arquivo caiu no lugar certo:
 
-- Um espaço por IF (IFES, IFF, IFMG, IFPE, IFPR, IFSP) para `IF…_LancamentosGestorFinanceiro.xlsx`. Basta os IFs da conferência. Para incluir outro instituto no futuro, acrescenta-se um espaço.
-- `Docentes e Equipe.xlsx` — CPFs a excluir (opcional)
+- Um espaço por IF (IFES, IFF, IFMG, IFPE, IFPR, IFSP, IFSUL) para `IF…_LancamentosGestorFinanceiro.xlsx`. Basta os IFs da conferência. Para incluir outro instituto no futuro, acrescenta-se um espaço.
+- `Docentes e Equipe.xlsx` — CPFs a excluir do Conveniar (opcional), no mesmo bloco dos extratos
 - `matriculados_sistema.xlsx` — matrículas do sistema de inscrições
 - `inscricoes-geral.csv` — inscrições geral, para ID e edital dos CPFs ausentes
 - `Planilha CPF antiga.xlsx` — base a atualizar

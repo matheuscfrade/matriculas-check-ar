@@ -13,8 +13,8 @@ export type FileSlot = {
   instituto?: string;
 };
 
-export const CONVENIAR_SLOTS: FileSlot[] = INSTITUTOS_CONVENIAR.map(
-  (instituto) => ({
+export const CONVENIAR_SLOTS: FileSlot[] = [
+  ...INSTITUTOS_CONVENIAR.map((instituto) => ({
     id: instituto.toLowerCase(),
     group: "conveniar" as const,
     role: "conveniar" as const,
@@ -22,8 +22,16 @@ export const CONVENIAR_SLOTS: FileSlot[] = INSTITUTOS_CONVENIAR.map(
     hint: `${instituto}_LancamentosGestorFinanceiro.xlsx`,
     required: false,
     instituto,
-  }),
-);
+  })),
+  {
+    id: "equipe",
+    group: "conveniar",
+    role: "equipe",
+    label: "Docentes e equipe",
+    hint: "Docentes e Equipe.xlsx",
+    required: false,
+  },
+];
 
 export const BASE_SLOTS: FileSlot[] = [
   {
@@ -58,14 +66,6 @@ export const BASE_SLOTS: FileSlot[] = [
     hint: "Matriculados.xlsx (aba Matrículas Consolidadas)",
     required: true,
   },
-  {
-    id: "equipe",
-    group: "bases",
-    role: "equipe",
-    label: "Docentes e equipe",
-    hint: "Docentes e Equipe.xlsx",
-    required: false,
-  },
 ];
 
 export const FILE_SLOTS: FileSlot[] = [...CONVENIAR_SLOTS, ...BASE_SLOTS];
@@ -99,7 +99,11 @@ export function missingSlots(files: { slotId?: string }[]): string[] {
     files.map((file) => file.slotId).filter((id): id is string => Boolean(id)),
   );
   const missing: string[] = [];
-  if (!CONVENIAR_SLOTS.some((slot) => filled.has(slot.id))) {
+  if (
+    !CONVENIAR_SLOTS.some(
+      (slot) => slot.role === "conveniar" && filled.has(slot.id),
+    )
+  ) {
     missing.push("extrato Conveniar (pelo menos um IF)");
   }
   for (const slot of BASE_SLOTS) {

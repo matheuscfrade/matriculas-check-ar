@@ -13,6 +13,7 @@ export const INSTITUTOS_CONVENIAR = [
   "IFPE",
   "IFPR",
   "IFSP",
+  "IFSUL",
 ] as const;
 
 const INSTITUTOS_NOTEBOOK = new Set<string>(INSTITUTOS_CONVENIAR);

@@ -43,7 +43,7 @@ describe("processConveniar", () => {
     ]);
   });
 
-  it("ignora IFSUL, que o notebook não lê", () => {
+  it("lê o extrato do IFSUL junto com os demais IFs", () => {
     const result = processConveniar(
       [
         {
@@ -72,8 +72,7 @@ describe("processConveniar", () => {
       [],
     );
 
-    expect(result).toHaveLength(1);
-    expect(result[0]?.Instituto).toBe("IFPE");
+    expect(result.map((row) => row.Instituto)).toEqual(["IFSUL", "IFPE"]);
   });
 
   it("arredonda a soma de Valor pago em 2 casas, como o Excel do notebook", () => {
