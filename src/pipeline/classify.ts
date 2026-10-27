@@ -39,10 +39,8 @@ export function classifyByName(filename: string): Classified {
   if (/planilha\s*cpf/i.test(filename)) return { role: "planilha_cpf" };
   if (/inscric/i.test(filename)) return { role: "inscritos" };
   if (/lancamentos/i.test(filename)) {
-    return {
-      role: "conveniar",
-      instituto: institutoFromName(filename) ?? "DESCONHECIDO",
-    };
+    const instituto = institutoFromName(filename);
+    return instituto ? { role: "conveniar", instituto } : { role: "conveniar" };
   }
   return { role: "unknown" };
 }
@@ -66,7 +64,11 @@ function looksLikeSistema(h: string[]): boolean {
 
 export function classifyByHeaders(headers: string[]): FileRole {
   const h = headers.map((header) => header.trim().toLowerCase());
-  if (h.includes("cpf/cnpj") && h.some((x) => x.includes("favorecido"))) {
+  if (
+    h.includes("cpf/cnpj") &&
+    (h.some((x) => x.includes("favorecido")) ||
+      h.includes("empresa / pessoa / projeto"))
+  ) {
     return "conveniar";
   }
   if (looksLikeSistema(h)) return "sistema";
@@ -111,9 +113,7 @@ export function classifyFile(filename: string, headers: string[]): Classified {
   return {
     role: headerRole,
     instituto:
-      headerRole === "conveniar"
-        ? (institutoFromName(filename) ?? "DESCONHECIDO")
-        : undefined,
+      headerRole === "conveniar" ? institutoFromName(filename) : undefined,
   };
 }
 
@@ -121,7 +121,7 @@ export function missingRequiredRoles(filenames: string[]): string[] {
   const roles = filenames.map((name) => classifyByName(name).role);
   const missing: string[] = [];
   if (!roles.includes("conveniar")) {
-    missing.push("extrato Conveniar (IF…_LancamentosGestorFinanceiro)");
+    missing.push("Consulta de lançamentos Conveniar");
   }
   if (!roles.includes("sistema")) missing.push("matriculados_sistema");
   if (!roles.includes("inscritos")) missing.push("inscricoes-geral");
@@ -135,7 +135,9 @@ export function missingRequiredRoles(filenames: string[]): string[] {
 export function roleLabel(classified: Classified): string {
   switch (classified.role) {
     case "conveniar":
-      return `Conveniar · ${classified.instituto ?? "?"}`;
+      return classified.instituto
+        ? `Conveniar · ${classified.instituto}`
+        : "Consulta de lançamentos Conveniar";
     case "equipe":
       return "Docentes e equipe";
     case "sistema":

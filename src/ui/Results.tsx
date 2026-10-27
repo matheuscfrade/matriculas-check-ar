@@ -25,8 +25,8 @@ export function Results({ result }: ResultsProps) {
       <h2>Resultado</h2>
       <ul className="resumo">
         <li>
-          {resumo.conveniar} pagamentos únicos no Conveniar (após excluir equipe
-          e CPFs só de editais 2024)
+          {resumo.conveniar} pagamentos únicos no Conveniar (após excluir CPFs
+          só de editais 2024)
         </li>
         <li>
           {resumo.cpfs2024} CPFs só de editais 2024 saíram do Conveniar

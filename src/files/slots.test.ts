@@ -7,30 +7,22 @@ import {
 } from "./slots";
 
 describe("slots Conveniar", () => {
-  it("tem um espaço por IF do notebook", () => {
-    expect(
-      CONVENIAR_SLOTS.filter((slot) => slot.instituto).map(
-        (slot) => slot.instituto,
-      ),
-    ).toEqual(["IFES", "IFF", "IFMG", "IFPE", "IFPR", "IFSP", "IFSUL"]);
-    expect(CONVENIAR_SLOTS.at(-1)?.id).toBe("equipe");
+  it("tem só o espaço da consulta unificada", () => {
+    expect(CONVENIAR_SLOTS.map((slot) => slot.id)).toEqual(["conveniar"]);
   });
 });
 
 describe("slotFileMismatch", () => {
-  it("aceita nome desconhecido no espaço do IF", () => {
+  it("aceita a consulta unificada e o extrato antigo por IF no mesmo espaço", () => {
     expect(
-      slotFileMismatch(slotById("ifpe")!, "pagamentos-setembro.xlsx"),
+      slotFileMismatch(slotById("conveniar")!, "ConsultaLancamentos.xlsx"),
     ).toBeNull();
-  });
-
-  it("recusa extrato de outro IF", () => {
     expect(
       slotFileMismatch(
-        slotById("ifpe")!,
-        "IFES_LancamentosGestorFinanceiro.xlsx",
+        slotById("conveniar")!,
+        "IFPE_LancamentosGestorFinanceiro.xlsx",
       ),
-    ).toMatch(/IFES/);
+    ).toBeNull();
   });
 
   it("recusa planilha de outro papel", () => {
@@ -38,12 +30,18 @@ describe("slotFileMismatch", () => {
       slotFileMismatch(slotById("sistema")!, "Matriculados.xlsx"),
     ).toMatch(/Matriculados/);
   });
+
+  it("recusa docentes e equipe no espaço da consulta", () => {
+    expect(
+      slotFileMismatch(slotById("conveniar")!, "Docentes e Equipe.xlsx"),
+    ).toMatch(/Docentes e equipe/);
+  });
 });
 
 describe("missingSlots", () => {
   it("pede um Conveniar e as bases obrigatórias", () => {
     expect(missingSlots([])).toEqual([
-      "extrato Conveniar (pelo menos um IF)",
+      "Consulta de lançamentos Conveniar",
       "Matriculados do sistema",
       "Inscrições geral",
       "Planilha CPF antiga",
@@ -51,16 +49,10 @@ describe("missingSlots", () => {
     ]);
   });
 
-  it("não libera o cruzamento só com docentes e equipe", () => {
-    expect(missingSlots([{ slotId: "equipe" }])).toContain(
-      "extrato Conveniar (pelo menos um IF)",
-    );
-  });
-
-  it("libera o cruzamento com um IF e as bases", () => {
+  it("libera o cruzamento com a consulta unificada e as bases", () => {
     expect(
       missingSlots([
-        { slotId: "ifpe" },
+        { slotId: "conveniar" },
         { slotId: "sistema" },
         { slotId: "inscritos" },
         { slotId: "planilha_cpf" },

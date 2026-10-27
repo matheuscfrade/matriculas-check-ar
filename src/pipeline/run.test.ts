@@ -32,7 +32,7 @@ describe("runPipeline", () => {
           ],
         },
       ],
-      equipe: [],
+
       sistema: [
         {
           EDITAL: "Edital n° 103/2025",
@@ -116,7 +116,7 @@ describe("runPipeline", () => {
           ],
         },
       ],
-      equipe: [],
+
       sistema: [
         {
           EDITAL: "Edital n° 103/2025",
@@ -169,7 +169,7 @@ describe("runPipeline", () => {
           ],
         },
       ],
-      equipe: [],
+
       sistema: [
         {
           EDITAL: "Edital n° 1/2025",
@@ -222,7 +222,7 @@ describe("runPipeline", () => {
           ],
         },
       ],
-      equipe: [],
+
       sistema: [
         {
           EDITAL: "Edital n° 103/2025",
@@ -284,7 +284,7 @@ describe("runPipeline", () => {
           ],
         },
       ],
-      equipe: [],
+
       sistema: [
         {
           EDITAL: "Edital n° 103/2025",
@@ -333,7 +333,7 @@ describe("runPipeline", () => {
           ],
         },
       ],
-      equipe: [],
+
       sistema: [
         {
           EDITAL: "Edital n° 1/2025",
@@ -391,7 +391,7 @@ describe("runPipeline", () => {
           ],
         },
       ],
-      equipe: [],
+
       sistema: [
         {
           EDITAL: "Edital n° 103/2025",
@@ -449,7 +449,7 @@ describe("runPipeline", () => {
           ],
         },
       ],
-      equipe: [],
+
       sistema: [
         {
           EDITAL: "Edital n° 151/2026",
@@ -498,7 +498,7 @@ describe("runPipeline", () => {
           ],
         },
       ],
-      equipe: [],
+
       sistema: [],
       planilhaAntiga: [],
       matriculados: [],
@@ -540,7 +540,7 @@ describe("runPipeline", () => {
           ],
         },
       ],
-      equipe: [],
+
       sistema: [
         {
           EDITAL: "Edital n° 1/2025",
@@ -617,7 +617,7 @@ describe("runPipeline", () => {
     const result = runPipeline({
       now: agora,
       conveniar: [],
-      equipe: [],
+
       sistema: [],
       planilhaAntiga: [
         {

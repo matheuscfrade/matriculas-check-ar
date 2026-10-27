@@ -15,7 +15,6 @@ import { processSistema } from "./sistema";
 
 export type PipelineInput = {
   conveniar: ConveniarFile[];
-  equipe: Row[];
   sistema: Row[];
   planilhaAntiga: Row[];
   matriculados?: Row[];
@@ -51,7 +50,7 @@ export function runPipeline(input: PipelineInput): PipelineResult {
   const finalizadosInfo = infoFinalizados(matriculados);
 
   const institutos = semCpfs(
-    processConveniar(input.conveniar, input.equipe),
+    processConveniar(input.conveniar),
     cpfs2024,
   );
   const pagos = valorPagoPorCpf(institutos);

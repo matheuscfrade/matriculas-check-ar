@@ -1,5 +1,4 @@
 import { classifyByName, roleLabel, type FileRole } from "../pipeline/classify";
-import { INSTITUTOS_CONVENIAR } from "../pipeline/conveniar";
 
 export type SlotGroup = "conveniar" | "bases";
 
@@ -14,22 +13,13 @@ export type FileSlot = {
 };
 
 export const CONVENIAR_SLOTS: FileSlot[] = [
-  ...INSTITUTOS_CONVENIAR.map((instituto) => ({
-    id: instituto.toLowerCase(),
-    group: "conveniar" as const,
-    role: "conveniar" as const,
-    label: instituto,
-    hint: `${instituto}_LancamentosGestorFinanceiro.xlsx`,
-    required: false,
-    instituto,
-  })),
   {
-    id: "equipe",
+    id: "conveniar",
     group: "conveniar",
-    role: "equipe",
-    label: "Docentes e equipe",
-    hint: "Docentes e Equipe.xlsx",
-    required: false,
+    role: "conveniar",
+    label: "Consulta de lançamentos",
+    hint: "ConsultaLancamentos.xlsx (pagamentos de alunos, todos os IFs)",
+    required: true,
   },
 ];
 
@@ -104,7 +94,7 @@ export function missingSlots(files: { slotId?: string }[]): string[] {
       (slot) => slot.role === "conveniar" && filled.has(slot.id),
     )
   ) {
-    missing.push("extrato Conveniar (pelo menos um IF)");
+    missing.push("Consulta de lançamentos Conveniar");
   }
   for (const slot of BASE_SLOTS) {
     if (slot.required && !filled.has(slot.id)) missing.push(slot.label);

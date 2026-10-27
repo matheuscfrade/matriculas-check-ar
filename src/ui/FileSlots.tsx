@@ -24,12 +24,11 @@ export function FileSlots({
   return (
     <div className="slots">
       <section className="slot-group" aria-labelledby="slots-conveniar">
-        <h2 id="slots-conveniar">Extratos Conveniar</h2>
+        <h2 id="slots-conveniar">Extrato Conveniar</h2>
         <p className="slot-lead">
-          Um arquivo por instituto. Docentes e equipe é opcional, para excluir
-          esses CPFs. Pode mandar só os IFs desta conferência.
+          Uma planilha com os pagamentos de alunos de todos os IFs.
         </p>
-        <div className="slot-grid">
+        <div className="slot-stack">
           {CONVENIAR_SLOTS.map((slot) => (
             <SlotDropzone
               key={slot.id}

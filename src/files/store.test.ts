@@ -68,32 +68,32 @@ describe("addFiles", () => {
 
 describe("setSlotFile", () => {
   it("coloca um arquivo no espaço e substitui se já houver", () => {
-    const first = makeFile("IFPE_LancamentosGestorFinanceiro.xlsx");
-    const second = makeFile("IFPE_LancamentosGestorFinanceiro (1).xlsx");
-    const { next: one } = setSlotFile([], "ifpe", first, {
+    const first = makeFile("ConsultaLancamentos.xlsx");
+    const second = makeFile("ConsultaLancamentos (1).xlsx");
+    const { next: one } = setSlotFile([], "conveniar", first, {
       idFactory: () => "a",
     });
-    const { next: two, errors } = setSlotFile(one, "ifpe", second, {
+    const { next: two, errors } = setSlotFile(one, "conveniar", second, {
       idFactory: () => "b",
     });
 
     expect(errors).toEqual([]);
     expect(two).toHaveLength(1);
-    expect(two[0]?.slotId).toBe("ifpe");
-    expect(two[0]?.name).toBe("IFPE_LancamentosGestorFinanceiro (1).xlsx");
+    expect(two[0]?.slotId).toBe("conveniar");
+    expect(two[0]?.name).toBe("ConsultaLancamentos (1).xlsx");
   });
 
-  it("recusa extrato de outro IF e mantém o arquivo anterior", () => {
+  it("recusa planilha de outro papel no espaço da consulta e mantém o arquivo anterior", () => {
     const { next: one } = setSlotFile(
       [],
-      "ifpe",
-      makeFile("IFPE_LancamentosGestorFinanceiro.xlsx"),
+      "conveniar",
+      makeFile("ConsultaLancamentos.xlsx"),
       { idFactory: () => "a" },
     );
     const { next, errors } = setSlotFile(
       one,
-      "ifpe",
-      makeFile("IFES_LancamentosGestorFinanceiro.xlsx"),
+      "conveniar",
+      makeFile("Matriculados.xlsx"),
     );
 
     expect(next).toEqual(one);

@@ -19,6 +19,15 @@ describe("classifyByName", () => {
     });
   });
 
+  it("reconhece a consulta unificada sem amarrar a um IF", () => {
+    expect(classifyByName("1791314573_ConsultaLancamentos.xlsx")).toEqual({
+      role: "conveniar",
+    });
+    expect(classifyByName("ConsultaLancamentos.xlsx")).toEqual({
+      role: "conveniar",
+    });
+  });
+
   it("reconhece equipe, sistema, inscrições e Planilha CPF", () => {
     expect(classifyByName("Docentes e Equipe.xlsx").role).toBe("equipe");
     expect(classifyByName("matriculados_sistema.xlsx").role).toBe("sistema");
@@ -40,7 +49,6 @@ describe("missingRequiredRoles", () => {
     expect(
       missingRequiredRoles([
         "IFPE_LancamentosGestorFinanceiro.xlsx",
-        "Docentes e Equipe.xlsx",
         "matriculados_sistema.xlsx",
         "inscricoes-geral.csv",
         "Planilha CPF antiga.xlsx",
@@ -48,7 +56,7 @@ describe("missingRequiredRoles", () => {
     ).toEqual(["Matriculados (aba Matrículas Consolidadas)"]);
     expect(
       missingRequiredRoles([
-        "IFPE_LancamentosGestorFinanceiro.xlsx",
+        "ConsultaLancamentos.xlsx",
         "matriculados_sistema.xlsx",
         "inscricoes-geral.csv",
         "Planilha CPF antiga.xlsx",
@@ -70,6 +78,18 @@ describe("missingRequiredRoles", () => {
 });
 
 describe("classifyByHeaders", () => {
+  it("reconhece a consulta unificada pelas colunas CPF/CNPJ e Empresa / Pessoa / Projeto", () => {
+    expect(
+      classifyByHeaders([
+        "Histórico",
+        "Valor Pago",
+        "Projeto",
+        "Empresa / Pessoa / Projeto",
+        "CPF/CNPJ",
+      ]),
+    ).toBe("conveniar");
+  });
+
   it("reconhece Matriculados pelas colunas Edital, ID e CPF", () => {
     expect(
       classifyByHeaders(["Edital", "ID", "Nome", "CPF", "Status"]),
@@ -128,5 +148,16 @@ describe("classifyFile", () => {
         "Valor",
       ]),
     ).toEqual({ role: "conveniar", instituto: "IFPE" });
+  });
+
+  it("mantém a consulta unificada quando nome e cabeçalhos batem", () => {
+    expect(
+      classifyFile("ConsultaLancamentos.xlsx", [
+        "Histórico",
+        "Valor Pago",
+        "Empresa / Pessoa / Projeto",
+        "CPF/CNPJ",
+      ]),
+    ).toEqual({ role: "conveniar" });
   });
 });

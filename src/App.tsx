@@ -21,9 +21,11 @@ const CONVENIAR_COLS = [
   "CPF/CNPJ",
   "CPF",
   "Favorecido",
+  "Empresa / Pessoa / Projeto",
   "Nome",
   "Histórico",
   "Historico",
+  "Projeto",
   "Valor",
   "Valor pago",
 ];
@@ -130,7 +132,6 @@ export default function App() {
     setResult(null);
     try {
       const conveniar: ConveniarFile[] = [];
-      let equipe: Row[] = [];
       let sistema: Row[] = [];
       let inscritos: Row[] = [];
       let planilhaAntiga: Row[] = [];
@@ -173,8 +174,6 @@ export default function App() {
             instituto,
             rows: pickColumns(rows, CONVENIAR_COLS),
           });
-        } else if (role === "equipe") {
-          equipe = equipe.concat(pickColumns(rows, ["CPF"]));
         } else if (role === "sistema") {
           sistema = sistema.concat(pickColumns(rows, SISTEMA_COLS));
         } else if (role === "inscritos") {
@@ -196,7 +195,7 @@ export default function App() {
         matriculados.length === 0
       ) {
         setRunError(
-          "Não foi possível identificar todos os arquivos. Confira cada espaço: um extrato Conveniar, matriculados_sistema, inscricoes-geral, Planilha CPF e Matriculados.",
+          "Não foi possível identificar todos os arquivos. Confira cada espaço: ConsultaLancamentos, matriculados_sistema, inscricoes-geral, Planilha CPF e Matriculados.",
         );
         return;
       }
@@ -205,7 +204,6 @@ export default function App() {
       setResult(
         runPipeline({
           conveniar,
-          equipe,
           sistema,
           inscritos,
           planilhaAntiga,
@@ -247,7 +245,7 @@ export default function App() {
           </button>
           <span>
             {missing.length > 0
-              ? `Falta: ${missing.join("; ")}. Docentes e equipe é opcional.`
+              ? `Falta: ${missing.join("; ")}.`
               : "O cruzamento roda neste computador. Depois você baixa a Planilha CPF e os CPFs ausentes."}
           </span>
         </p>

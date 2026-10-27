@@ -22,26 +22,30 @@ function cursoDoHistorico(historico: string): string {
   return historico.match(/;([^;]+);/)?.[1] ?? "";
 }
 
-export function processConveniar(
-  files: ConveniarFile[],
-  equipe: Row[],
-): Row[] {
-  const excluir = new Set(
-    equipe.map((row) => formatarCpf(cell(row, "CPF"))),
+function institutoDaLinha(row: Row, fallback: string): string {
+  const projeto = cellStr(row, "Projeto");
+  const found = INSTITUTOS_CONVENIAR.find((code) =>
+    new RegExp(`(^|[^A-Za-z])${code}([^A-Za-z]|$)`, "i").test(projeto),
   );
+  return found ?? fallback;
+}
+
+export function processConveniar(files: ConveniarFile[]): Row[] {
   const linhas: Row[] = [];
 
   for (const file of files) {
-    if (!INSTITUTOS_NOTEBOOK.has(file.instituto)) continue;
     for (const row of file.rows) {
+      const instituto = institutoDaLinha(row, file.instituto);
+      if (!INSTITUTOS_NOTEBOOK.has(instituto)) continue;
       const cpf = formatarCpf(cell(row, "CPF/CNPJ", "CPF"));
-      if (excluir.has(cpf)) continue;
       linhas.push({
         CPF: cpf,
-        Nome: cellStr(row, "Favorecido", "Nome"),
-        Instituto: file.instituto,
+        Nome: cellStr(row, "Favorecido", "Empresa / Pessoa / Projeto", "Nome"),
+        Instituto: instituto,
         Descrição: cursoDoHistorico(cellStr(row, "Histórico", "Historico")),
-        "Valor pago": roundMoney(toNumber(cell(row, "Valor", "Valor pago"))),
+        "Valor pago": roundMoney(
+          toNumber(cell(row, "Valor pago", "Valor")),
+        ),
       });
     }
   }
